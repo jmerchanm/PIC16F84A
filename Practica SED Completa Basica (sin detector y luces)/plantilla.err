@@ -1,0 +1,10 @@
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\PLANTILLA.ASM 41 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\PLANTILLA.ASM 42 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\PLANTILLA.ASM 43 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\PLANTILLA.ASM 44 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\LCD_4BIT.INC 84 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\EMITIR.INC 29 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\EMITIR.INC 30 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\RECIBIR.INC 52 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\RECIBIR.INC 53 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\VIERNES 30MAYO-MODIFICACIONES\RECIBIR.INC 121 : Register in operand not in bank 0.  Ensure that bank bits are correct.
