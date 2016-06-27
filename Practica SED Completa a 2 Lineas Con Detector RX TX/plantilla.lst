@@ -1,0 +1,1640 @@
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ; ** PLANTILLA.ASM ************************************************
+                      00002 ; **               Francisco Javier Merchán Macías               **
+                      00003 ; **                     Fatima Romero Romero                    **
+                      00004 ; **                     Esmeralda Rubio Parra                   **
+                      00005 ; **                       I.T.T.Telemática                      **
+                      00006 ; *****************************************************************
+                      00007 ; ** Descripción práctica:                                       **
+                      00008 ; **                                                 .           **
+                      00009 ; **   Emisor y receptor.                                        **
+                      00010 ; **                                                             **
+                      00011 ; **                                                             **
+                      00012 ; **                                                             **
+                      00013 ; *****************************************************************
+                      00014 
+                      00015 ; ZONA DE DATOS **********************************************************************
+                      00016 
+2007   3FF1           00017         __CONFIG _CP_OFF& _WDT_OFF&_PWRTE_ON&_XT_OSC    ; Configuración para el grabador
+                      00018 
+                      00019         LIST P=16F84A                                   ; Indica el tipo de mC utilizado.
+                      00020         INCLUDE <P16F84A.INC>                   ; Incluye las definiciones de registros y constantes aso
+                            ciadas a este mC.
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00021 
+                      00022         CBLOCK 0x0C                     ;La zona de memoria de usuario comienza en esta dirección de mem
+                            oria RAM de datos
+  0000000C            00023         ENVIO
+  0000000D            00024         ContadorEnvio
+  0000000E            00025         ContadorEmisor          ;Contador para ENVIO.INC
+  0000000F            00026         ContadorReceptor        ;Contador para RECIBIR.INC
+  00000010            00027         DatosRecibido           ;Para guardar el dato en RECIBIR.INC
+                      00028         ENDC
+                      00029 
+                      00030 ;   CONSTANTES ****************************************************
+                      00031         #DEFINE Pulsador                        PORTA,4
+                      00032         #DEFINE PuertaEnviar            PORTB,1
+                      00033         #DEFINE PuertaRecibir           PORTB,0
+                      00034 ;       #DEFINE SalidaComprobar         PORTB,3
+                      00035 ;       #DEFINE EntradaComprobar        PORTB,2
+                      00036 
+                      00037 ;ZONA DE CODIGO **********************************************************************
+0000                  00038         ORG 0
+                      00039 
+0000                  00040 Inicio
+                      00041 ;   CONFIGURACIÓN DE ENTRADAS Y SALIDAS ***************************
+0000   1683           00042         bsf             STATUS, RP0                     ;Acceso al banco 1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   1086           00043         bcf             TRISB,1         ;RB1 como salida. (PUERTA DE ENVIO DE DATOS)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0002   1406           00044         bsf             TRISB,0         ;RB0 como entrada. (PUERTA DE RECEPCION DE DATOS)
+                      00045 ;       bcf             TRISB,3         ;RB3 como salida. COMPROBACIONES.
+                      00046 ;       bsf             TRISB,2         ;RB2 como entrada. COMPROBACIONES.
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0003   1585           00047         bsf             TRISA,3         ;RA3 como entrada (INTERRUPTOR)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0004   1605           00048         bsf             TRISA,4         ;RA3 como entrada (INTERRUPTOR)
+0005   1283           00049         bcf     STATUS, RP0                     ;Acceso al banco 0
+                      00050 
+                      00051 ;Aquí empieza el programa en sí...
+0006                  00052 Principal
+0006   200A           00053         call    Presentacion
+0007   21FB           00054         call    Elegir
+0008                  00055 Dormir
+0008   0063           00056         sleep
+0009   2808           00057         goto    Dormir
+                      00058 
+                      00059 ;-----------INICIO Instrucciones para el inicio y presentacion---------------------------------------
+000A                  00060 Presentacion
+000A   20E0           00061         call    LCD_Inicializa
+000B   211C           00062         call    LCD_Borra
+000C   3016           00063         movlw   MensajeBienvenida
+000D   2164           00064         call    LCD_Mensaje
+000E   21C1           00065         call    Retardo_2s
+000F   3040           00066         movlw   0x40
+0010   2112           00067         call    LCD_PosicionLinea1
+0011   3023           00068         movlw   MensajeElige
+0012   2164           00069         call    LCD_Mensaje
+0013   21C1           00070         call    Retardo_2s
+0014   0008           00071         return
+                      00072 ;-----------FIN Instrucciones para el inicio y presentacion---------------------------------------
+                      00073 
+                      00074 ; Mensajes ----------------------------------------
+0015                  00075 Mensajes
+0015   0782           00076         addwf   PCL,F
+0016                  00077 MensajeBienvenida                               ;En subrutina Presentacion de PLANTILLA.ASM
+0016   3450 3472 3461 00078         DT "Practica SED", 0x00
+       3463 3474 3469 
+       3463 3461 3420 
+       3453 3445 3444 
+       3400 
+0023                  00079 MensajeElige                                    ;En subrutina Presentacion de PLANTILLA.ASM
+0023   3445 346C 3469 00080         DT "Elige TX o RX:", 0x00
+       3467 3465 3420 
+       3454 3458 3420 
+       346F 3420 3452 
+       3458 343A 3400 
+0032                  00081 Mensaje0                                                ;En subrutina de ELIGIR.INC
+0032   3430 343D 3452 00082         DT "0=Receptor", 0x00
+       3465 3463 3465 
+       3470 3474 346F 
+       3472 3400 
+003D                  00083 Mensaje1                                                ;En subrutina de ELIGIR.INC
+003D   3431 343D 3445 00084         DT "1=Emisor", 0x00
+       346D 3469 3473 
+       346F 3472 3400 
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0046                  00085 MensajeDatCargado                               ;En subrutina de CARGANDO.INC
+0046   3444 3461 3474 00086         DT "Datos Cargados", 0x00
+       346F 3473 3420 
+       3443 3461 3472 
+       3467 3461 3464 
+       346F 3473 3400 
+0055                  00087 MensajeEmitiendo                                ;En subrutina de EMITIR.INC
+0055   3445 344D 3449 00088         DT "EMITIENDO RB1", 0x00
+       3454 3449 3445 
+       344E 3444 344F 
+       3420 3452 3442 
+       3431 3400 
+0063                  00089 MensajeRecibiendo                               ;En subrutina de RECIBIR.INC
+0063   3452 3445 3443 00090         DT "RECIBIENDO RB0", 0x00
+       3449 3442 3449 
+       3445 344E 3444 
+       344F 3420 3452 
+       3442 3430 3400 
+0072                  00091 MensDatosEnv                                    ;En subrutina de EMITIR.INC
+0072   3444 3461 3474 00092         DT "Datos ENVIADOS", 0x00
+       346F 3473 3420 
+       3445 344E 3456 
+       3449 3441 3444 
+       344F 3453 3400 
+0081                  00093 RecCorrect                                              ;En subrutina de RECIBIR.INC
+0081   3452 3445 3443 00094         DT "RECEPCION OK", 0x00
+       3445 3450 3443 
+       3449 344F 344E 
+       3420 344F 344B 
+       3400 
+008E                  00095 MensajeBitStart                                 ;En subrutina de RECIBIR.INC
+008E   3442 3469 3474 00096         DT "Bit Start", 0x00
+       3420 3453 3474 
+       3461 3472 3474 
+       3400 
+0098                  00097 MensajeBStop                                    ;En subrutina de RECIBIR.INC
+0098   3442 3469 3474 00098         DT "Bit Stop ", 0x00
+       3420 3453 3474 
+       346F 3470 3420 
+       3400 
+00A2                  00099 MensajeErrorHayDosEmisores              ;En subrutina de ELIGIR.INC
+00A2   3445 3472 3472 00100         DT "Error Hay 2 TX ", 0x00
+       346F 3472 3420 
+       3448 3461 3479 
+       3420 3432 3420 
+       3454 3458 3420 
+       3400 
+00B2                  00101 MensajeErrorHayDosReceptores    ;En subrutina de ELIGIR.INC
+00B2   3445 3472 3472 00102         DT "Error Hay 2 RX ", 0x00
+       346F 3472 3420 
+       3448 3461 3479 
+       3420 3432 3420 
+       3452 3458 3420 
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+       3400 
+00C2                  00103 MensajeEmisorEncontrado                 ;En subrutina de ELIGIR.INC
+00C2   3445 346D 3469 00104         DT "Emisor Found!", 0x00
+       3473 346F 3472 
+       3420 3446 346F 
+       3475 346E 3464 
+       3421 3400 
+00D0                  00105 MensajeReceptorEncontrado               ;En subrutina de ELIGIR.INC
+00D0   3452 3465 3463 00106         DT "Receptor Found!", 0x00
+       3465 3470 3474 
+       346F 3472 3420 
+       3446 346F 3475 
+       346E 3464 3421 
+       3400 
+                      00107 
+                      00108         INCLUDE <LCD_4BIT.INC>
+                      00001 ;       ===================================================================
+                      00002 ;
+                      00003 ; Estas subrutinas permiten realizar las tareas básicas de control de un módulo LCD de 2
+                      00004 ; líneas por 16 caracteres, compatible con el modelo LM016L.
+                      00005 ;
+                      00006 ; El visualizador LCD está conectado al Puerto B del PIC mediante un bus de 4 bits. Las
+                      00007 ; conexiones son:
+                      00008 ;    -  Las 4 líneas superiores del módulo LCD, pines <DB7:DB4>  se conectan a las 4
+                      00009 ;       líneas superiores del Puerto B del PIC, pines <RB7:RB4>.
+                      00010 ;    -  Pin RS del LCD a la línea RA0 del PIC.
+                      00011 ;    -  Pin R/W del LCD a la línea RA1 del PIC, o a masa.
+                      00012 ;    -  Pin Enable del LCD a la línea RA2 del PIC.
+                      00013 ;
+                      00014 ; Se utilizan las subrutinas de retardo de tiempo localizadas en la librería RETARDOS.INC.
+                      00015 ;
+                      00016 ; ZONA DE DATOS *********************************************************************
+                      00017 
+                      00018         CBLOCK
+  00000011            00019         LCD_Dato
+  00000012            00020         LCD_GuardaDato
+  00000013            00021         LCD_GuardaTRISB
+  00000014            00022         LCD_Auxiliar1
+  00000015            00023         LCD_Auxiliar2
+                      00024         ENDC
+                      00025 
+  00000010            00026 LCD_CaracteresPorLinea  EQU     .16     ; Número de caracteres por línea de la pantalla.
+                      00027 
+                      00028 #DEFINE  LCD_PinRS      PORTA,0
+                      00029 #DEFINE  LCD_PinRW      PORTA,1
+                      00030 #DEFINE  LCD_PinEnable  PORTA,2
+                      00031 #DEFINE  LCD_BusDatos   PORTB
+                      00032 
+                      00033 ; Subrutina "LCD_Inicializa" ------------------------------------------------------------
+                      00034 ;
+                      00035 ; Inicialización del módulo LCD: Configura funciones del LCD, produce reset por software,
+                      00036 ; borra memoria y enciende pantalla. El fabricante especifica que para garantizar la
+                      00037 ; configuración inicial hay que hacerla como sigue:
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00038 ;
+00E0                  00039 LCD_Inicializa
+00E0   1683           00040         bsf     STATUS,RP0              ; Configura las líneas conectadas al pines RS,
+00E1   1005           00041         bcf     LCD_PinRS               ; R/W y E.
+00E2   1105           00042         bcf     LCD_PinEnable
+00E3   1085           00043         bcf     LCD_PinRW
+00E4   1283           00044         bcf     STATUS,RP0
+00E5   1085           00045         bcf     LCD_PinRW               ; En caso de que esté conectado le indica
+                      00046                                         ; que se va a escribir en el LCD.
+00E6   1105           00047         bcf     LCD_PinEnable           ; Impide funcionamiento del LCD poniendo E=0.
+00E7   1005           00048         bcf     LCD_PinRS               ; Activa el Modo Comando poniendo RS=0.
+00E8   21A9           00049         call    Retardo_20ms
+00E9   3030           00050         movlw   b'00110000'     
+00EA   20F8           00051         call    LCD_EscribeLCD          ; Escribe el dato en el LCD.
+00EB   21AD           00052         call    Retardo_5ms     
+00EC   3030           00053         movlw   b'00110000'     
+00ED   20F8           00054         call    LCD_EscribeLCD
+00EE   2196           00055         call    Retardo_200micros
+00EF   3030           00056         movlw   b'00110000'     
+00F0   20F8           00057         call    LCD_EscribeLCD
+00F1   3020           00058         movlw   b'00100000'             ; Interface de 4 bits.
+00F2   20F8           00059         call    LCD_EscribeLCD
+                      00060 
+                      00061 ; Ahora configura el resto de los parámetros: 
+                      00062 
+00F3   211E           00063         call    LCD_2Lineas4Bits5x7     ; LCD de 2 líneas y caracteres de 5x7 puntos.
+00F4   211C           00064         call    LCD_Borra               ; Pantalla encendida y limpia. Cursor al principio
+00F5   211A           00065         call    LCD_CursorOFF           ; de la línea 1. Cursor apagado.
+00F6   210C           00066         call    LCD_CursorIncr          ; Cursor en modo incrementar.
+00F7   0008           00067         return
+                      00068 
+                      00069 ; Subrutina "LCD_EscribeLCD" -----------------------------------------------------------
+                      00070 ;
+                      00071 ; Envía el dato del registro de trabajo W al bus de dato y produce un pequeño pulso en el pin
+                      00072 ; Enable del LCD. Para no alterar el contenido de las líneas de la parte baja del Puerto B que
+                      00073 ; no son utilizadas para el LCD (pines RB3:RB0), primero se lee estas líneas y después se
+                      00074 ; vuelve a enviar este dato sin cambiarlo.
+                      00075 
+00F8                  00076 LCD_EscribeLCD
+00F8   39F0           00077         andlw   b'11110000'             ; Se queda con el nibble alto del dato que es el
+00F9   0091           00078         movwf   LCD_Dato                ; que hay que enviar y lo guarda.
+00FA   0806           00079         movf    LCD_BusDatos,W          ; Lee la información actual de la parte baja
+00FB   390F           00080         andlw   b'00001111'             ; del Puerto B, que no se debe alterar.
+00FC   0491           00081         iorwf   LCD_Dato,F              ; Enviará la parte alta del dato de entrada
+                      00082                                         ; y en la parte baja lo que había antes.
+00FD   1683           00083         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00FE   0806           00084         movf    TRISB,W         ; Guarda la configuración que tenía antes TRISB.
+00FF   0093           00085         movwf   LCD_GuardaTRISB
+0100   300F           00086         movlw   b'00001111'             ; Las 4 líneas inferiores del Puerto B se dejan 
+0101   0586           00087         andwf   PORTB,F                 ; como estaban y las 4 superiores como salida.
+0102   1283           00088         bcf     STATUS,RP0              ; Acceso al Banco 0.
+                      00089 ;
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0103   0811           00090         movf    LCD_Dato,W              ; Recupera el dato a enviar.
+0104   0086           00091         movwf   LCD_BusDatos            ; Envía el dato al módulo LCD.
+0105   1505           00092         bsf     LCD_PinEnable           ; Permite funcionamiento del LCD mediante un pequeño
+0106   1105           00093         bcf     LCD_PinEnable           ; pulso y termina impidiendo el funcionamiento del LCD.
+0107   1683           00094         bsf     STATUS,RP0              ; Acceso al Banco 1. Restaura el antiguo valor en
+0108   0813           00095         movf    LCD_GuardaTRISB,W       ; la configuración del Puerto B.
+0109   0086           00096         movwf   PORTB                   ; Realmente es TRISB.
+010A   1283           00097         bcf     STATUS,RP0              ; Acceso al Banco 0.
+010B   0008           00098         return
+                      00099 
+                      00100 ; Subrutinas variadas para el control del módulo LCD -----------------------------------------
+                      00101 ;
+                      00102 ;Los comandos que pueden ser ejecutados son:
+                      00103 ;
+010C                  00104 LCD_CursorIncr                          ; Cursor en modo incrementar.
+010C   3006           00105         movlw   b'00000110'
+010D   291F           00106         goto    LCD_EnviaComando
+010E                  00107 LCD_Linea1                              ; Cursor al principio de la Línea 1.
+010E   3080           00108         movlw   b'10000000'             ; Dirección 00h de la DDRAM
+010F   291F           00109         goto    LCD_EnviaComando
+0110                  00110 LCD_Linea2                              ; Cursor al principio de la Línea 2.
+0110   30C0           00111         movlw   b'11000000'             ; Dirección 40h de la DDRAM
+0111   291F           00112         goto    LCD_EnviaComando
+0112                  00113 LCD_PosicionLinea1                      ; Cursor a posición de la Línea 1, a partir de la
+0112   3880           00114         iorlw   b'10000000'             ; dirección 80h de la DDRAM más el valor del
+0113   291F           00115         goto    LCD_EnviaComando        ; registro W.
+0114                  00116 LCD_PosicionLinea2                      ; Cursor a posición de la Línea 2, a partir de la
+0114   38C0           00117         iorlw   b'11000000'             ; dirección C0h de la DDRAM más el valor del
+0115   291F           00118         goto    LCD_EnviaComando        ; registro W.
+0116                  00119 LCD_OFF                         ; Pantalla apagada.
+0116   3008           00120         movlw   b'00001000'
+0117   291F           00121         goto    LCD_EnviaComando
+0118                  00122 LCD_CursorON                            ; Pantalla encendida y cursor encendido.
+0118   300E           00123         movlw   b'00001110'
+0119   291F           00124         goto    LCD_EnviaComando
+011A                  00125 LCD_CursorOFF                           ; Pantalla encendida y cursor apagado.
+011A   300C           00126         movlw   b'00001100'
+011B   291F           00127         goto    LCD_EnviaComando
+011C                  00128 LCD_Borra                               ; Borra toda la pantalla, memoria DDRAM y pone el 
+011C   3001           00129         movlw   b'00000001'             ; cursor a principio de la línea 1.
+011D   291F           00130         goto    LCD_EnviaComando
+011E                  00131 LCD_2Lineas4Bits5x7                     ; Define la pantalla de 2 líneas, con caracteres
+011E   3028           00132         movlw   b'00101000'             ; de 5x7 puntos y conexión al PIC mediante bus de
+                      00133 ;       goto    LCD_EnviaComando        ; 4 bits. 
+                      00134 
+                      00135 ; Subrutinas "LCD_EnviaComando" y "LCD_Caracter" ------------------------------------
+                      00136 ;
+                      00137 ; "LCD_EnviaComando". Escribe un comando en el registro del módulo LCD. La palabra de
+                      00138 ; comando ha sido entregada a través del registro W.  Trabaja en Modo Comando.
+                      00139 ; "LCD_Caracter". Escribe en la memoria DDRAM del LCD el carácter ASCII introducido a
+                      00140 ; a través del registro W. Trabaja en Modo Dato.
+                      00141 ;
+011F                  00142 LCD_EnviaComando
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+011F   1005           00143         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+0120   2923           00144         goto    LCD_Envia
+0121                  00145 LCD_Caracter
+0121   1405           00146         bsf     LCD_PinRS               ; Activa el "Modo Dato", poniendo RS=1.
+0122   212B           00147         call    LCD_CodigoCGROM ; Obtiene el código para correcta visualización.
+0123                  00148 LCD_Envia
+0123   0092           00149         movwf   LCD_GuardaDato          ; Guarda el dato a enviar.
+0124   20F8           00150         call    LCD_EscribeLCD          ; Primero envía el nibble alto.
+0125   0E12           00151         swapf   LCD_GuardaDato,W        ; Ahora envía el nibble bajo. Para ello pasa el
+                      00152                                         ; nibble bajo del dato a enviar a parte alta del byte.
+0126   20F8           00153         call    LCD_EscribeLCD          ; Se envía al visualizador LCD.
+0127   1C05           00154         btfss   LCD_PinRS               ; Debe garantizar una correcta escritura manteniendo 
+0128   21AF           00155         call    Retardo_2ms             ; 2 ms en modo comando y 50 µs en modo cáracter.
+0129   219B           00156         call    Retardo_50micros
+012A   0008           00157         return  
+                      00158 
+                      00159 ; Subrutina "LCD_CodigoCGROM" -----------------------------------------------------------
+                      00160 ;
+                      00161 ; A partir del carácter ASCII número 127 los códigos de los caracteres definidos en la
+                      00162 ; tabla CGROM del LM016L no coinciden con los códigos ASCII. Así por ejemplo, el código
+                      00163 ; ASCII de la "Ñ" en la tabla CGRAM del LM016L es EEh.
+                      00164 ;
+                      00165 ; Esta subrutina convierte los códigos ASCII de la "Ñ", "º" y otros, a códigos CGROM para que
+                      00166 ; que puedan ser visualizado en el módulo LM016L.
+                      00167 ; 
+                      00168 ; Entrada:      En (W) el código ASCII del carácter que se desea visualizar.
+                      00169 ; Salida:       En (W) el código definido en la tabla CGROM.
+                      00170 
+012B                  00171 LCD_CodigoCGROM
+012B   0091           00172         movwf   LCD_Dato                ; Guarda el valor del carácter y comprueba si es
+012C                  00173 LCD_EnheMinuscula                       ; un carácter especial.
+012C   3CF1           00174         sublw   'ñ'                     ; ¿Es la "ñ"?
+012D   1D03           00175         btfss   STATUS,Z
+012E   2932           00176         goto    LCD_EnheMayuscula       ; No es "ñ".
+012F   30EE           00177         movlw   b'11101110'             ; Código CGROM de la "ñ".
+0130   0091           00178         movwf   LCD_Dato
+0131   293F           00179         goto    LCD_FinCGROM
+0132                  00180 LCD_EnheMayuscula
+0132   0811           00181         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+0133   3CD1           00182         sublw   'Ñ'                     ; ¿Es la "Ñ"?
+0134   1D03           00183         btfss   STATUS,Z
+0135   2939           00184         goto    LCD_Grado               ; No es "Ñ".
+0136   30EE           00185         movlw   b'11101110'             ; Código CGROM de la "ñ". (No hay símbolo para
+0137   0091           00186         movwf   LCD_Dato                ; la "Ñ" mayúscula en la CGROM).
+0138   293F           00187         goto    LCD_FinCGROM    
+0139                  00188 LCD_Grado
+0139   0811           00189         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+013A   3CBA           00190         sublw   'º'                     ; ¿Es el símbolo "º"?
+013B   1D03           00191         btfss   STATUS,Z
+013C   293F           00192         goto    LCD_FinCGROM            ; No es "º".
+013D   30DF           00193         movlw   b'11011111'             ; Código CGROM del símbolo "º".
+013E   0091           00194         movwf   LCD_Dato
+013F                  00195 LCD_FinCGROM
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+013F   0811           00196         movf    LCD_Dato,W              ; En (W) el código buscado.
+0140   0008           00197         return
+                      00198 
+                      00199 ; Subrutina "LCD_DosEspaciosBlancos" y "LCD_LineaBlanco" --------------------------------
+                      00200 ;
+                      00201 ; Visualiza espacios en blanco.
+                      00202 
+0141                  00203 LCD_LineaEnBlanco
+0141   3010           00204         movlw   LCD_CaracteresPorLinea
+0142   2948           00205         goto    LCD_EnviaBlancos
+0143                  00206 LCD_UnEspacioBlanco
+0143   3001           00207         movlw   .1
+0144   2948           00208         goto    LCD_EnviaBlancos
+0145                  00209 LCD_DosEspaciosBlancos
+0145   3002           00210         movlw   .2
+0146   2948           00211         goto    LCD_EnviaBlancos
+0147                  00212 LCD_TresEspaciosBlancos
+0147   3003           00213         movlw   .3
+0148                  00214 LCD_EnviaBlancos
+0148   0094           00215         movwf   LCD_Auxiliar1           ; (LCD_Auxiliar1) se utiliza como contador.
+0149                  00216 LCD_EnviaOtroBlanco     
+0149   3020           00217         movlw   ' '                     ; Esto es un espacio en blanco.
+014A   2121           00218         call    LCD_Caracter            ; Visualiza tanto espacios en blanco como se
+014B   0B94           00219         decfsz  LCD_Auxiliar1,F         ; haya cargado en (LCD_Auxiliar1).
+014C   2949           00220         goto    LCD_EnviaOtroBlanco
+014D   0008           00221         return
+                      00222 
+                      00223 ; Subrutinas "LCD_ByteCompleto" y "LCD_Byte" --------------------------------------------
+                      00224 ;
+                      00225 ; Subrutina "LCD_ByteCompleto", visualiza el byte que almacena el registro W en el
+                      00226 ; lugar actual de la pantalla. Por ejemplo, si (W)=b'10101110' visualiza "AE".
+                      00227 ;
+                      00228 ; Subrutina "LCD_Byte" igual que la anterior, pero en caso de que el nibble alto sea cero 
+                      00229 ; visualiza en su lugar un espacio en blanco. Por ejemplo si (W)=b'10101110' visualiza "AE"
+                      00230 ; y si (W)=b'00001110', visualiza " E" (un espacio blanco delante).
+                      00231 ;
+                      00232 ; Utilizan la subrutina "LCD_Nibble" que se analiza más adelante.
+                      00233 ;
+014E                  00234 LCD_Byte
+014E   0095           00235         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+014F   39F0           00236         andlw   b'11110000'             ; Analiza si el nibble alto es cero.
+0150   1D03           00237         btfss   STATUS,Z                ; Si es cero lo apaga.
+0151   2956           00238         goto    LCD_VisualizaAlto               ; No es cero y lo visualiza.
+0152   3020           00239         movlw   ' '                     ; Visualiza un espacio en blanco.
+0153   2121           00240         call    LCD_Caracter
+0154   2958           00241         goto    LCD_VisualizaBajo
+                      00242 
+0155                  00243 LCD_ByteCompleto
+0155   0095           00244         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+0156                  00245 LCD_VisualizaAlto
+0156   0E15           00246         swapf   LCD_Auxiliar2,W         ; Pone el nibble alto en la parte baja.
+0157   2159           00247         call    LCD_Nibble              ; Lo visualiza.
+0158                  00248 LCD_VisualizaBajo
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0158   0815           00249         movf    LCD_Auxiliar2,W         ; Repite el proceso con el nibble bajo.
+                      00250 ;       call    LCD_Nibble              ; Lo visualiza.
+                      00251 ;       return
+                      00252 
+                      00253 ; Subrutina "LCD_Nibble" ----------------------------------------------------------------
+                      00254 ;
+                      00255 ; Visualiza en el lugar actual de la pantalla, el valor hexadecimal que almacena en el nibble
+                      00256 ; bajo del registro W. El nibble alto de W no es tenido en cuenta. Ejemplos:
+                      00257 ; - Si (W)=b'01010110', se visualizará "6". 
+                      00258 ; - Si (W)=b'10101110', se visualizará "E". 
+                      00259 ;
+0159                  00260 LCD_Nibble
+0159   390F           00261         andlw   b'00001111'             ; Se queda con la parte baja.
+015A   0094           00262         movwf   LCD_Auxiliar1           ; Lo guarda.
+015B   3C09           00263         sublw   0x09                    ; Comprueba si hay que representarlo con letra.
+015C   1C03           00264         btfss   STATUS,C        
+015D   2961           00265         goto    LCD_EnviaByteLetra
+015E   0814           00266         movf    LCD_Auxiliar1,W
+015F   3E30           00267         addlw   '0'                     ; El número se pasa a carácter ASCII sumándole
+0160   2963           00268         goto    LCD_FinVisualizaDigito  ; el ASCII del cero y lo visualiza.
+0161                  00269 LCD_EnviaByteLetra
+0161   0814           00270         movf    LCD_Auxiliar1,W
+0162   3E37           00271         addlw   'A'-0x0A                        ; Sí, por tanto, se le suma el ASCII de la 'A'.
+0163                  00272 LCD_FinVisualizaDigito
+0163   2921           00273         goto    LCD_Caracter            ; Y visualiza el carácter. Se hace con un "goto"
+                      00274                                         ; para no sobrecargar la pila.
+                      00109         INCLUDE <LCD_MENS.INC>
+                      00001 
+                      00002 ; Librería de subrutinas para el manejo de mensajes a visualizar en un visualizador LCD.
+                      00003 
+                      00004         CBLOCK
+  00000016            00005         LCD_ApuntaCaracter              ; Indica la posición del carácter a visualizar
+                      00006                                         ; respecto del comienzo de todos los mensajes,
+                      00007                                         ; (posición de la etiqueta "Mensajes").
+  00000017            00008         LCD_ValorCaracter                       ; Código ASCII del carácter a 
+                      00009         ENDC                            ; visualizar.
+                      00010 
+                      00011 ; Los mensajes tienen que estar situados dentro de las 256 primeras posiciones de la 
+                      00012 ; memoria de programa, es decir, no pueden superar la dirección 0FFh.
+                      00013 
+                      00014 ; Subrutina "LCD_Mensaje" ---------------------------------------------------------------
+                      00015 ;
+                      00016 ; Visualiza por pantalla el mensaje apuntado por el registro W.
+                      00017 ;
+                      00018 ; Los mensajes deben localizarse dentro de una zona encabezada por la etiqueta "Mensajes" y que
+                      00019 ; tenga la siguiente estructura:
+                      00020 ;
+                      00021 ; Mensajes                              ; ¡Etiqueta obligatoria!
+                      00022 ;       addwf   PCL,F
+                      00023 ; Mensaje0                              ; Posición inicial del mensaje.
+                      00024 ;       DT ".. ..", 0x00                        ; Mensaje terminado en 0x00.
+                      00025 ; Mensaje1
+                      00026 ;       ...     
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00027 ;       ...
+                      00028 ; FinMensajes
+                      00029 ;
+                      00030 ; La llamada a esta subrutina se realizará siguiendo este ejemplo:
+                      00031 ;
+                      00032 ;       movlw   Mensaje0                        ; Carga la posición del mensaje.
+                      00033 ;       call    LCD_Mensaje             ; Visualiza el mensaje.
+                      00034 ;
+0164                  00035 LCD_Mensaje
+0164   0096           00036         movwf   LCD_ApuntaCaracter      ; Posición del primer carácter del mensaje.
+0165   3015           00037         movlw   Mensajes                        ; Halla la posición relativa del primer carácter
+0166   0296           00038         subwf   LCD_ApuntaCaracter,F    ; del mensaje respecto de etiqueta "Mensajes".
+0167   0396           00039         decf    LCD_ApuntaCaracter,F    ; Compensa la posición que ocupa "addwf PCL,F".
+0168                  00040 LCD_VisualizaOtroCaracter
+0168   0816           00041         movf    LCD_ApuntaCaracter,W
+0169   2015           00042         call    Mensajes                        ; Obtiene el código ASCII del carácter apuntado.
+016A   0097           00043         movwf   LCD_ValorCaracter               ; Guarda el valor de carácter.
+016B   0897           00044         movf    LCD_ValorCaracter,F     ; Lo único que hace es posicionar flag Z. En caso
+016C   1903           00045         btfsc   STATUS,Z                ; que sea "0x00", que es código indicador final 
+016D   2971           00046         goto    LCD_FinMensaje          ; de mensaje, sale fuera.
+016E                  00047 LCD_NoUltimoCaracter
+016E   2121           00048         call    LCD_Caracter            ; Visualiza el carácter ASCII leído.
+016F   0A96           00049         incf    LCD_ApuntaCaracter,F    ; Apunta a la posición del siguiente carácter 
+0170   2968           00050         goto    LCD_VisualizaOtroCaracter       ; dentro del mensaje.
+0171                  00051 LCD_FinMensaje
+0171   0008           00052         return                          ; Vuelve al programa principal.
+                      00053 
+                      00054 ; Subrutina "LCD_MensajeMovimiento" -----------------------------------------------------
+                      00055 ;
+                      00056 ; Visualiza un mensaje de mayor longitud que los 16 caracteres que pueden representarse
+                      00057 ; en una línea, por tanto se desplaza a través de la pantalla.
+                      00058 ;
+                      00059 ; En el mensaje debe dejarse 16 espacios en blanco, al principio y al final para
+                      00060 ; conseguir que el desplazamiento del mensaje sea lo más legible posible.
+                      00061 ;
+                      00062         CBLOCK  
+  00000018            00063         LCD_CursorPosicion              ; Contabiliza la posición del cursor dentro de la
+                      00064         ENDC                            ; pantalla LCD
+                      00065 
+0172                  00066 LCD_MensajeMovimiento
+0172   0096           00067         movwf   LCD_ApuntaCaracter      ; Posición del primer carácter del mensaje.
+0173   3015           00068         movlw   Mensajes                        ; Halla la posición relativa del primer carácter
+0174   0296           00069         subwf   LCD_ApuntaCaracter,F    ; del mensaje respecto de la etiqueta "Mensajes".
+0175   0396           00070         decf    LCD_ApuntaCaracter,F    ; Compensa la posición que ocupa "addwf PCL,F".
+0176                  00071 LCD_PrimeraPosicion
+0176   0198           00072         clrf    LCD_CursorPosicion      ; El cursor en la posición 0 de la línea.
+0177   211C           00073         call    LCD_Borra               ; Se sitúa en la primera posición de la línea 1 y
+0178                  00074 LCD_VisualizaCaracter                   ; borra la pantalla.
+0178   3010           00075         movlw   LCD_CaracteresPorLinea  ; ¿Ha llegado a final de línea?
+0179   0218           00076         subwf   LCD_CursorPosicion,W
+017A   1D03           00077         btfss   STATUS,Z
+017B   2981           00078         goto    LCD_NoEsFinalLinea
+                      00079 
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+017C                  00080 LCD_EsFinalLinea
+017C   21A3           00081         call    Retardo_200ms           ; Lo mantiene visualizado durante este tiempo.
+017D   21A3           00082         call    Retardo_200ms
+017E   300F           00083         movlw   LCD_CaracteresPorLinea-1; Apunta a la posición del segundo carácter visualizado
+017F   0296           00084         subwf   LCD_ApuntaCaracter,F    ; en pantalla, que será el primero en la siguiente
+0180   2976           00085         goto    LCD_PrimeraPosicion      ; visualización de línea, para producir el efecto
+0181                  00086 LCD_NoEsFinalLinea                      ; de desplazamiento hacia la izquierda.
+0181   0816           00087         movf    LCD_ApuntaCaracter,W
+0182   2015           00088         call    Mensajes                        ; Obtiene el ASCII del carácter apuntado.
+0183   0097           00089         movwf   LCD_ValorCaracter               ; Guarda el valor de carácter.
+0184   0897           00090         movf    LCD_ValorCaracter,F     ; Lo único que hace es posicionar flag Z. En caso
+0185   1903           00091         btfsc   STATUS,Z                ; que sea "0x00", que es código indicador final 
+0186   298B           00092         goto    LCD_FinMovimiento       ; de mensaje, sale fuera.
+0187                  00093 LCD_NoUltimoCaracter2
+0187   2121           00094         call    LCD_Caracter            ; Visualiza el carácter ASCII leído.
+0188   0A98           00095         incf    LCD_CursorPosicion,F    ; Contabiliza el incremento de posición del 
+                      00096                                         ; cursor en la pantalla.
+0189   0A96           00097         incf    LCD_ApuntaCaracter,F    ; Apunta a la siguiente posición por visualizar.
+018A   2978           00098         goto    LCD_VisualizaCaracter   ; Vuelve a visualizar el siguiente carácter
+018B                  00099 LCD_FinMovimiento                       ; de la línea.
+018B   0008           00100         return                          ; Vuelve al programa principal.
+                      00101         
+                      00102 
+                      00110         INCLUDE <RETARDOS.INC>
+                      00001 ;       ===================================================================
+                      00002 ;
+                      00003 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00004 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00005 ;
+                      00006 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00007 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00008 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00009 ;
+                      00010 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00011 ;
+                      00012 ; ZONA DE DATOS *********************************************************************
+                      00013 
+                      00014         CBLOCK
+  00000019            00015         R_ContA                         ; Contadores para los retardos.
+  0000001A            00016         R_ContB
+  0000001B            00017         R_ContC
+                      00018         ENDC
+                      00019 ;
+                      00020 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00021 ;
+                      00022 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00023 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00024 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00025 ;
+018C                  00026 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+018C   0000           00027         nop                             ; Aporta 1 ciclo máquina.
+018D   0000           00028         nop                             ; Aporta 1 ciclo máquina.
+018E   0000           00029         nop                             ; Aporta 1 ciclo máquina.
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+018F   0000           00030         nop                             ; Aporta 1 ciclo máquina.
+0190   0000           00031         nop                             ; Aporta 1 ciclo máquina.
+0191                  00032 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0191   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+0192                  00034 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0192   0008           00035         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00036 ;
+                      00037 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00038 ;
+0193                  00039 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0193   0000           00040         nop                             ; Aporta 1 ciclo máquina.
+0194   30A4           00041         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0195   299F           00042         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0196                  00043 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0196   0000           00044         nop                             ; Aporta 1 ciclo máquina.
+0197   3040           00045         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0198   299F           00046         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0199                  00047 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0199   301F           00048         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+019A   299F           00049         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+019B                  00050 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+019B   0000           00051         nop                             ; Aporta 1 ciclo máquina.
+019C   300E           00052         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+019D   299F           00053         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+019E                  00054 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+019E   3005           00055         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00056 ;
+                      00057 ; El próximo bloque "RetardoMicros" tarda:
+                      00058 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00059 ;
+019F                  00060 RetardoMicros
+019F   0099           00061         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+01A0                  00062 Rmicros_Bucle
+01A0   0B99           00063         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+01A1   29A0           00064         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+01A2   0008           00065         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00066 ;
+                      00067 ;En total estas subrutinas tardan:
+                      00068 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00069 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00070 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00071 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00072 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00073 ;
+                      00074 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00075 ;
+01A3                  00076 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+01A3   30C8           00077         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01A4   29B2           00078         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01A5                  00079 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+01A5   3064           00080         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01A6   29B2           00081         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01A7                  00082 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+01A7   3032           00083         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01A8   29B2           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01A9                  00085 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+01A9   3014           00086         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01AA   29B2           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01AB                  00088 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+01AB   300A           00089         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01AC   29B2           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01AD                  00091 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+01AD   3005           00092         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01AE   29B2           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01AF                  00094 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+01AF   3002           00095         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+01B0   29B2           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+01B1                  00097 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+01B1   3001           00098         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00099 ;
+                      00100 ; El próximo bloque "Retardos_ms" tarda:
+                      00101 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00102 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00103 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00104 ;
+01B2                  00105 Retardos_ms
+01B2   009A           00106         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+01B3                  00107 R1ms_BucleExterno
+01B3   30F9           00108         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+01B4   0099           00109         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+01B5                  00110 R1ms_BucleInterno
+01B5   0000           00111         nop                             ; Aporta KxMx1 ciclos máquina.
+01B6   0B99           00112         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+01B7   29B5           00113         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+01B8   0B9A           00114         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+01B9   29B3           00115         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+01BA   0008           00116         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00117 ;
+                      00118 ;En total estas subrutinas tardan:
+                      00119 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00120 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00121 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00122 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00123 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00124 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00125 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00126 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00127 ;
+                      00128 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00129 ;
+01BB                  00130 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+01BB   30C8           00131         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+01BC   29C6           00132         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+01BD                  00133 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+01BD   3064           00134         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+01BE   29C6           00135         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+01BF                  00136 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+01BF   3032           00137         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+01C0   29C6           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+01C1                  00139 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+01C1   3014           00140         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+01C2   29C6           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+01C3                  00142 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+01C3   300A           00143         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+01C4   29C6           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+01C5                  00145 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+01C5   3005           00146         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00147 ;
+                      00148 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00149 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00150 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00151 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00152 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00153 ;
+01C6                  00154 Retardo_1Decima
+01C6   009B           00155         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+01C7                  00156 R1Decima_BucleExterno2
+01C7   3064           00157         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+01C8   009A           00158         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+01C9                  00159 R1Decima_BucleExterno
+01C9   30F9           00160         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+01CA   0099           00161         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+01CB                  00162 R1Decima_BucleInterno          
+01CB   0000           00163         nop                             ; Aporta KxMxNx1 ciclos máquina.
+01CC   0B99           00164         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+01CD   29CB           00165         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+01CE   0B9A           00166         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+01CF   29C9           00167         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+01D0   0B9B           00168         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+01D1   29C7           00169         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+01D2   0008           00170         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00171 ;
+                      00172 ;En total estas subrutinas tardan:
+                      00173 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00174 ;                       (N=200, M=100 y K=249).
+                      00175 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00176 ;                       (N=100, M=100 y K=249).
+                      00177 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00178 ;                       (N= 50, M=100 y K=249).
+                      00179 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00180 ;                       (N= 20, M=100 y K=249).
+                      00181 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00182 ;                       (N= 10, M=100 y K=249).
+                      00183 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00184 ;                       (N=  5, M=100 y K=249).
+                      00111         INCLUDE <CARGANDO.INC>          ;Includes Propios
+                      00001 ; ** CARGANDO.INC *************************************************
+                      00002 ; **               Francisco Javier Merchán Macías               **
+                      00003 ; **                     Fatima Romero Romero                    **
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 15
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00004 ; **                     Esmeralda Rubio Parra                   **
+                      00005 ; **                       I.T.T.Telemática                      **
+                      00006 ; *****************************************************************
+                      00007 ; ** Descripción:                                                **
+                      00008 ; **                                                             **
+                      00009 ; **   Libreria para cargar los datos a enviar                   **
+                      00010 ; **                                                             **
+                      00011 ; **                                                             **
+                      00012 ; **                                                             **
+                      00013 ; *****************************************************************
+                      00014 
+01D3                  00015 Cargando
+01D3   21C1           00016         call    Retardo_2s
+01D4   3008           00017         movlw   0x08
+01D5   008D           00018         movwf   ContadorEnvio                   ;Cargamos el contador con un 8
+01D6   018C           00019         clrf    ENVIO
+01D7   20E0           00020         call    LCD_Inicializa                  ;Hacemos un cuadro para meter los valores que carguemos.
+01D8   211C           00021         call    LCD_Borra
+01D9   3003           00022         movlw   0x03
+01DA   2112           00023         call    LCD_PosicionLinea1
+01DB   305B           00024         movlw   '['
+01DC   2121           00025         call    LCD_Caracter
+01DD   300C           00026         movlw   0x0c
+01DE   2112           00027         call    LCD_PosicionLinea1
+01DF   305D           00028         movlw   ']'
+01E0   2121           00029         call    LCD_Caracter
+01E1   3004           00030         movlw   0x04
+01E2   2112           00031         call    LCD_PosicionLinea1
+                      00032 
+01E3                  00033 CargandoInicio                                          ;Leemos el interruptor y lo cargamos en un regis
+                            tro.
+01E3   1A05           00034         btfsc   Pulsador
+01E4   29E6           00035         goto    CargandoUno
+01E5   29EE           00036         goto    CargandoCero
+                      00037 
+01E6                  00038 CargandoUno
+01E6   1403           00039         bsf             STATUS,C
+01E7   0C8C           00040         rrf             ENVIO,1
+                      00041 ;   ESCRIBE UN 1 EN LA PANTALLA LCD
+01E8   3031           00042         movlw   '1'
+01E9   2121           00043         call    LCD_Caracter
+01EA   21C1           00044         call    Retardo_2s
+                      00045 ;   DECREMENTAMOS EL CONTADOR
+01EB   0B8D           00046         decfsz  ContadorEnvio,1
+01EC   29E3           00047         goto    CargandoInicio
+01ED   29F5           00048         goto    CargandoFin
+                      00049 
+01EE                  00050 CargandoCero
+01EE   1003           00051         bcf             STATUS,C
+01EF   0C8C           00052         rrf             ENVIO,1
+                      00053 ;   ESCRIBE UN 0 EN LA PANTALLA LCD
+01F0   3030           00054         movlw   '0'
+01F1   2121           00055         call    LCD_Caracter
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 16
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+01F2   21C1           00056         call    Retardo_2s
+                      00057 ;   DECREMENTAMOS EL CONTADOR
+01F3   0B8D           00058         decfsz  ContadorEnvio,1
+01F4   29E3           00059         goto    CargandoInicio
+01F5                  00060 CargandoFin
+01F5   211C           00061         call    LCD_Borra
+01F6   2110           00062         call    LCD_Linea2
+01F7   3046           00063         movlw   MensajeDatCargado
+01F8   2164           00064         call    LCD_Mensaje
+01F9   21C1           00065         call    Retardo_2s
+                      00066 
+01FA   0008           00067         return
+                      00112         INCLUDE <ELEGIR.INC>
+                      00001 ; ** ELEGIR.INC ***************************************************
+                      00002 ; **               Francisco Javier Merchán Macías               **
+                      00003 ; **                     Fatima Romero Romero                    **
+                      00004 ; **                     Esmeralda Rubio Parra                   **
+                      00005 ; **                       I.T.T.Telemática                      **
+                      00006 ; *****************************************************************
+                      00007 ; ** Descripción:                                                **
+                      00008 ; **                                                             **
+                      00009 ; **   Libreria para elegir si es emisor o receptor              **
+                      00010 ; **                                                             **
+                      00011 ; **                                                             **
+                      00012 ; **                                                             **
+                      00013 ; *****************************************************************
+                      00014 
+01FB                  00015 Elegir
+01FB   1E05           00016         btfss   Pulsador                ;Si es 0 ejecuta la siguiente instrucción, si es 1 salta la inst
+                            rucción
+01FC   2A0E           00017         goto    ElegirEsCero
+                      00018 
+                      00019 ; ///////////////////////////////////////////////////////////////////////////////
+                      00020 ; /////////////////////////  INICIO EMISOR  /////////////////////////////////////
+                      00021 ; ///////////////////////////////////////////////////////////////////////////////
+01FD                  00022 ElegirNoEsCero                          ;Esto es el EMISOR *********************************************
+                            **
+01FD   211C           00023         call    LCD_Borra
+01FE   303D           00024         movlw   Mensaje1
+01FF   2164           00025         call    LCD_Mensaje
+0200   21C1           00026         call    Retardo_2s
+                      00027 
+                      00028 ;Informar al otro pic que somos Emisor
+                      00029 ;       bcf             SalidaComprobar                         ;Ponemos a 0 la Puerta RB3
+0201   1486           00030         bsf             PuertaEnviar
+0202   21BF           00031         call    Retardo_5s                      ;Esperamos antes de comprobar las entradas
+                      00032 
+                      00033 ;------------------------Comprobamos que el otro pic es Receptor
+                      00034 ;       btfsc   EntradaComprobar
+0203   1C06           00035         btfss   PuertaRecibir
+0204   2A06           00036         goto    BIENTenemosReceptor             ;RB2 = 1 ESTA BIEN, TEMEMOS UN RECEPTOR AL OTRO LADO.
+0205   2A1E           00037         goto    ErrorHayDosEmisores             ;RB2 = 0 No hay receptor al otro lado!!!!
+                      00038 ;------------------------Comprobamos que el otro pic es Receptor
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 17
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00039 
+0206                  00040 BIENTenemosReceptor
+                      00041 ;*****************************
+                      00042 ;** ENCONTRAMOS EL RECEPTOR **
+                      00043 ;*****************************
+0206   0103           00044         clrw
+0207   211C           00045         call    LCD_Borra
+0208   30D0           00046         movlw   MensajeReceptorEncontrado
+0209   2164           00047         call    LCD_Mensaje
+020A   21C1           00048         call    Retardo_2s
+020B   21D3           00049         call    Cargando
+020C   222B           00050         call    Emitir
+                      00051 
+020D   2A2A           00052         goto    ElegirFIN
+                      00053 
+                      00054 ; ////////////////////////////////////////////////////////////////////////////////
+                      00055 ; ///////////////////////// INICIO REPCEPTOR /////////////////////////////////////
+                      00056 ; ////////////////////////////////////////////////////////////////////////////////
+020E                  00057 ElegirEsCero                            ;Este es el RECEPTOR *******************************************
+                            ****
+020E   211C           00058         call    LCD_Borra
+020F   3032           00059         movlw   Mensaje0
+0210   2164           00060         call    LCD_Mensaje
+0211   21C1           00061         call    Retardo_2s
+                      00062 
+                      00063 ;Informar al otro pic que somos Receptor
+                      00064 ;       bsf             SalidaComprobar                         ;Ponemos a 0 la Puerta RB3
+0212   1086           00065         bcf             PuertaEnviar
+0213   21BF           00066         call    Retardo_5s                      ;Esperamos antes de comprobar las entradas
+                      00067 
+                      00068 ;------------------------Comprobamos que el otro pic es Emisor
+                      00069 ;       btfsc   EntradaComprobar
+0214   1C06           00070         btfss   PuertaRecibir
+0215   2A24           00071         goto    ErrorHayDosReceptores           ;RB2 = 0 No hay receptor al otro lado!!!!
+0216   2A17           00072         goto    BIENTenemosEmisor                       ;RB2 = 1 ESTA BIEN, TEMEMOS UN RECEPTOR AL OTRO 
+                            LADO.
+                      00073 ;------------------------Comprobamos que el otro pic es Receptor
+                      00074 
+0217                  00075 BIENTenemosEmisor
+                      00076 ;***************************
+                      00077 ;** ENCONTRAMOS EL EMISOR **
+                      00078 ;***************************
+0217   0103           00079         clrw
+0218   211C           00080         call    LCD_Borra
+0219   30C2           00081         movlw   MensajeEmisorEncontrado
+021A   2164           00082         call    LCD_Mensaje
+021B   21C1           00083         call    Retardo_2s
+                      00084 
+021C   224A           00085         call    Recibir
+021D   2A2A           00086         goto    ElegirFIN
+                      00087 
+021E                  00088 ErrorHayDosEmisores
+021E   0103           00089         clrw
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 18
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+021F   211C           00090         call    LCD_Borra
+0220   30A2           00091         movlw   MensajeErrorHayDosEmisores
+0221   2164           00092         call    LCD_Mensaje
+0222   21C1           00093         call    Retardo_2s
+0223   2808           00094         goto    Dormir
+                      00095 
+0224                  00096 ErrorHayDosReceptores
+0224   0103           00097         clrw
+0225   211C           00098         call    LCD_Borra
+0226   30B2           00099         movlw   MensajeErrorHayDosReceptores
+0227   2164           00100         call    LCD_Mensaje
+0228   21C1           00101         call    Retardo_2s
+0229   2808           00102         goto    Dormir
+                      00103 
+022A                  00104 ElegirFIN
+022A   0008           00105         return
+                      00113         INCLUDE <EMITIR.INC>
+                      00001 ; ** EMITIR.INC ***************************************************
+                      00002 ; **               Francisco Javier Merchán Macías               **
+                      00003 ; **                     Fatima Romero Romero                    **
+                      00004 ; **                     Esmeralda Rubio Parra                   **
+                      00005 ; **                       I.T.T.Telemática                      **
+                      00006 ; *****************************************************************
+                      00007 ; ** Descripción:                                                **
+                      00008 ; **                                                             **
+                      00009 ; **   Emitir                                                                                    **
+                      00010 ; **                                                             **
+                      00011 ; **       El registro que contiene los datos es ENVIO           **
+                      00012 ; **  PuertaEnviar:  Emitimos por RB1                            **
+                      00013 ; **  PuertaRecibir: Recibimos por RB0                           **
+                      00014 ; *****************************************************************
+                      00015 
+022B                  00016 Emitir
+                      00017 ; Comprobamos si el receptor es un receptor o emisor, para evitar problemas de emisión
+022B   3008           00018         movlw   0x08
+022C   008E           00019         movwf   ContadorEmisor
+                      00020 
+                      00021 ; Empezamos a enviar el bit START
+022D   0103           00022         clrw                                            ;Ponemos mensaje EMITIENDO
+022E   211C           00023         call    LCD_Borra
+022F   3055           00024         movlw   MensajeEmitiendo
+0230   2164           00025         call    LCD_Mensaje
+0231   21C3           00026         call    Retardo_1s
+                      00027 
+                      00028 ;PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0232   1406           00029         bsf             TRISB,0                         ;Ponemos a 1 las puertas de salida
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0233   1486           00030         bsf             TRISB,1                         ;Ponemos a 1 las puertas de salida
+                      00031 ;PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA
+                      00032         
+0234   1086           00033         bcf             PuertaEnviar                            ;Enviamos un 0. BIT de START
+0235   21C3           00034         call    Retardo_1s
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 19
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00035 
+                      00036 ; Emitimos la cadena almacenada
+0236                  00037 ComenzamosAEmitir
+0236   0C8C           00038         rrf             ENVIO,1
+0237   1803           00039         btfsc   STATUS,C
+0238   2A3A           00040         goto    EnviarUno                       ;Envia un 1
+0239   2A3F           00041         goto    EnviarCero                      ;Envia un 0
+                      00042 
+023A                  00043 EnviarUno
+023A   1486           00044         bsf             PuertaEnviar
+023B   21C3           00045         call    Retardo_1s
+023C   0B8E           00046         decfsz  ContadorEmisor,F
+023D   2A36           00047         goto    ComenzamosAEmitir
+023E   2A43           00048         goto    EmitirFIN
+                      00049 
+023F                  00050 EnviarCero      
+023F   1086           00051         bcf             PuertaEnviar
+                      00052 ;       call    Retardo_5s
+0240   21C3           00053         call    Retardo_1s
+0241   0B8E           00054         decfsz  ContadorEmisor,F
+0242   2A36           00055         goto    ComenzamosAEmitir
+                      00056 ;       goto    EmitirFIN                       ; No hace falta esta instrucción porque tenemos el codig
+                            o debajo.
+                      00057 
+0243                  00058 EmitirFIN
+                      00059 ;Ponemos el BIT de STOP
+0243   1486           00060         bsf             PuertaEnviar
+0244   21C1           00061         call    Retardo_2s
+0245   211C           00062         call    LCD_Borra
+0246   3072           00063         movlw   MensDatosEnv
+0247   2164           00064         call    LCD_Mensaje
+0248   21C1           00065         call    Retardo_2s
+0249   0008           00066         return
+                      00114         INCLUDE <RECIBIR.INC>
+                      00001 ; ** RECIBIR.INC **************************************************
+                      00002 ; **               Francisco Javier Merchán Macías               **
+                      00003 ; **                     Fatima Romero Romero                    **
+                      00004 ; **                     Esmeralda Rubio Parra                   **
+                      00005 ; **                       I.T.T.Telemática                      **
+                      00006 ; *****************************************************************
+                      00007 ; ** Descripción:                                                **
+                      00008 ; **                                                             **
+                      00009 ; **   Recibir                                                                                   **
+                      00010 ; **                                                             **
+                      00011 ; **                                                             **
+                      00012 ; **  Emitimos por RA1                                           **
+                      00013 ; **  Recibimos por RA0 (Para comprobar si el otro es emisor o no**
+                      00014 ; *****************************************************************
+                      00015 
+024A                  00016 Recibir
+024A   0103           00017         clrw
+024B   3008           00018         movlw   0x08
+024C   008F           00019         movwf   ContadorReceptor                ;Cargamos el contador con un 8
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 20
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00020 
+024D   0103           00021         clrw
+024E   211C           00022         call    LCD_Borra
+024F   3063           00023         movlw   MensajeRecibiendo
+0250   2164           00024         call    LCD_Mensaje
+0251   21C1           00025         call    Retardo_2s
+                      00026 
+                      00027 ;----------------PRUEBA-----------------------
+                      00028 ;Comprobar
+                      00029 ;       btfsc   PuertaRecibir
+                      00030 ;       goto    RecibirUno
+                      00031 ;       goto    RecibirCero
+                      00032 
+                      00033 ;RecibirUno
+                      00034 ;       call    LCD_Borra
+                      00035 ;       movlw   RecibimosUno
+                      00036 ;       call    LCD_Mensaje
+                      00037 ;       call    Retardo_100ms
+                      00038 ;       goto    Comprobar
+                      00039 
+                      00040 ;RecibirCero
+                      00041 ;       call    LCD_Borra
+                      00042 ;       movlw   RecibimosCero
+                      00043 ;       call    LCD_Mensaje
+                      00044 ;       call    Retardo_100ms
+                      00045 ;       goto    Comprobar
+                      00046 ;---------------FIN PRUEBA--------------------
+                      00047 
+                      00048 ;Empezamos a Recibir el bit START
+0252                  00049 BitStart
+                      00050 ;Ponemos a 1 las puertas para evitar Falsos Positivos
+                      00051 ;PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA
+0252   1406           00052         bsf             PuertaRecibir                           ;Ponemos a 1 las puertas de salida
+0253   1486           00053         bsf             PuertaEnviar                            ;Ponemos a 1 las puertas de salida
+                      00054 ;       bsf             EntradaComprobar
+                      00055 ;       bsf             SalidaComprobar
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0254   1406           00056         bsf             TRISB,0
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0255   1486           00057         bsf             TRISB,1
+                      00058 ;       bsf             TRISB,2
+                      00059 ;       bsf             TRISB,3
+                      00060 ;PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA PRUEBA
+                      00061 
+0256   1806           00062         btfsc   PuertaRecibir   ;COMPROBAMOS SI ES UN 0 (Bit de Start)
+0257   2A52           00063         goto    BitStart                ;Si es 1 vuelve a comprobar hasta que le llega un 0
+                      00064                                                         ;Si es 0 POSIBLEMENTE tenemos el bit de Start y 
+                            continuamos el codigo.
+0258   21A3           00065         call    Retardo_200ms
+0259   21A3           00066         call    Retardo_200ms
+025A   21A5           00067         call    Retardo_100ms   ;Esperamos medio segundo para comprobar si es un 0 o no
+025B   1806           00068         btfsc   PuertaRecibir   ;VOLVEMOS A COMPROBAR QUE ES UN 0.
+025C   2A52           00069         goto    BitStart                ;No es el bit de Start, es un error.
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 21
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+025D   211C           00070         call    LCD_Borra               ;Si es el bit de Start lo muestra en pantalla
+025E   210E           00071         call    LCD_Linea1
+025F   308E           00072         movlw   MensajeBitStart
+0260   2164           00073         call    LCD_Mensaje
+0261   21A3           00074         call    Retardo_200ms
+0262   21A3           00075         call    Retardo_200ms
+0263   21A5           00076         call    Retardo_100ms   ;Esperamos otro medio segundo
+0264   21A3           00077         call    Retardo_200ms   ;200ms más para no estar al comienzo del bit, sino un poco más al medio.
+0265   2110           00078         call    LCD_Linea2
+                      00079 
+0266                  00080 DRecibido                               ;SI ES EL BIT DE START (comenzamos a recibir)
+0266   1806           00081         btfsc   PuertaRecibir
+0267   2A69           00082         goto    RecUno
+0268   2A71           00083         goto    RecCero
+                      00084 
+0269                  00085 RecUno
+                      00086 ;   ESCRIBE UN 1 EN LA PANTALLA LCD
+0269   3031           00087         movlw   '1'
+026A   2121           00088         call    LCD_Caracter
+026B   21C3           00089         call    Retardo_1s
+                      00090 ;       GUARDAMOS LO QUE RECIBIMOS EN UN REGISTRO
+026C   1403           00091         bsf             STATUS,C
+026D   0C90           00092         rrf             DatosRecibido,1
+                      00093 ;   DECREMENTAMOS EL CONTADOR
+026E   0B8F           00094         decfsz  ContadorReceptor,1
+026F   2A66           00095         goto    DRecibido                               ;Ir al inicio de DRecibido o lo que es lo mismo 
+                            DatoRecibido
+0270   2A78           00096         goto    BitStop
+                      00097 
+0271                  00098 RecCero
+                      00099 ;   ESCRIBE UN 0 EN LA PANTALLA LCD
+0271   3030           00100         movlw   '0'
+0272   2121           00101         call    LCD_Caracter
+0273   21C3           00102         call    Retardo_1s
+                      00103 ;       GUARDAMOS LO QUE RECIBIMOS EN UN REGISTRO
+0274   1003           00104         bcf             STATUS,C
+0275   0C90           00105         rrf             DatosRecibido,1
+                      00106 ;   DECREMENTAMOS EL CONTADOR
+0276   0B8F           00107         decfsz  ContadorReceptor,1
+0277   2A66           00108         goto    DRecibido                               ;Ir al inicio de DRecibido o lo que es lo mismo 
+                            DatoRecibido
+                      00109 
+0278                  00110 BitStop
+0278   21C3           00111         call    Retardo_1s
+0279   210E           00112         call    LCD_Linea1
+027A   3098           00113         movlw   MensajeBStop
+027B   2164           00114         call    LCD_Mensaje
+027C   21C1           00115         call    Retardo_2s
+                      00116 
+027D                  00117 FinReceptor
+027D   211C           00118         call    LCD_Borra
+027E   3081           00119         movlw   RecCorrect
+027F   2164           00120         call    LCD_Mensaje
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 22
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0280   21C1           00121         call    Retardo_2s
+                      00122 
+0281                  00123 PintarEnLeds
+                      00124 ;       call    LCD_OFF                         ;Apagamos el LCD
+                      00125 ;   CONFIGURACIÓN DE ENTRADAS Y SALIDAS ***************************
+0281   1683           00126         bsf             STATUS, RP0                     ;Acceso al banco 1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0282   0186           00127         clrf    TRISB                           ;Todas las líneas del Puerto B como salida
+0283   1283           00128         bcf     STATUS, RP0                     ;Acceso al banco 0
+                      00129 ;       FIN DE CONFIGURACIÓN DE LAS ENTRADAS Y SALIDAS
+                      00130 
+                      00131 ;       MOSTRAMOS EL DATO RECIBIDO EN LOS LEDs
+0284   0C90           00132         rrf             DatosRecibido,1
+0285   1803           00133         btfsc   STATUS,C
+0286   2A88           00134         goto    RB7_1
+0287   2A8A           00135         goto    RB7_0
+0288                  00136 RB7_1   
+0288   1786           00137         bsf             PORTB,7
+0289   2A8B           00138         goto    RB6_Continua
+028A                  00139 RB7_0   
+028A   1386           00140         bcf             PORTB,7
+                      00141 
+028B                  00142 RB6_Continua
+028B   0C90           00143         rrf             DatosRecibido,1
+028C   1803           00144         btfsc   STATUS,C
+028D   2A8F           00145         goto    RB6_1
+028E   2A91           00146         goto    RB6_0
+028F                  00147 RB6_1
+028F   1706           00148         bsf             PORTB,6
+0290   2A92           00149         goto    RB5_Continua
+0291                  00150 RB6_0   
+0291   1306           00151         bcf             PORTB,6
+                      00152 
+0292                  00153 RB5_Continua
+0292   0C90           00154         rrf             DatosRecibido,1
+0293   1803           00155         btfsc   STATUS,C
+0294   2A96           00156         goto    RB5_1
+0295   2A98           00157         goto    RB5_0
+0296                  00158 RB5_1
+0296   1686           00159         bsf             PORTB,5
+0297   2A99           00160         goto    RB4_Continua
+0298                  00161 RB5_0   
+0298   1286           00162         bcf             PORTB,5
+                      00163 
+0299                  00164 RB4_Continua
+0299   0C90           00165         rrf             DatosRecibido,1
+029A   1803           00166         btfsc   STATUS,C
+029B   2A9D           00167         goto    RB4_1
+029C   2A9F           00168         goto    RB4_0
+029D                  00169 RB4_1
+029D   1606           00170         bsf             PORTB,4
+029E   2AA0           00171         goto    RB3_Continua
+029F                  00172 RB4_0   
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 23
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+029F   1206           00173         bcf             PORTB,4
+                      00174 
+02A0                  00175 RB3_Continua
+02A0   0C90           00176         rrf             DatosRecibido,1
+02A1   1803           00177         btfsc   STATUS,C
+02A2   2AA4           00178         goto    RB3_1
+02A3   2AA6           00179         goto    RB3_0
+02A4                  00180 RB3_1
+02A4   1586           00181         bsf             PORTB,3
+02A5   2AA7           00182         goto    RB2_Continua
+02A6                  00183 RB3_0   
+02A6   1186           00184         bcf             PORTB,3
+                      00185 
+02A7                  00186 RB2_Continua
+02A7   0C90           00187         rrf             DatosRecibido,1
+02A8   1803           00188         btfsc   STATUS,C
+02A9   2AAB           00189         goto    RB2_1
+02AA   2AAD           00190         goto    RB2_0
+02AB                  00191 RB2_1
+02AB   1506           00192         bsf             PORTB,2
+02AC   2AAE           00193         goto    RB1_Continua
+02AD                  00194 RB2_0   
+02AD   1106           00195         bcf             PORTB,2
+                      00196 
+02AE                  00197 RB1_Continua
+02AE   0C90           00198         rrf             DatosRecibido,1
+02AF   1803           00199         btfsc   STATUS,C
+02B0   2AB2           00200         goto    RB1_1
+02B1   2AB4           00201         goto    RB1_0
+02B2                  00202 RB1_1
+02B2   1486           00203         bsf             PORTB,1
+02B3   2AB5           00204         goto    RB0_Continua
+02B4                  00205 RB1_0   
+02B4   1086           00206         bcf             PORTB,1
+                      00207 
+02B5                  00208 RB0_Continua
+02B5   0C90           00209         rrf             DatosRecibido,1
+02B6   1803           00210         btfsc   STATUS,C
+02B7   2AB9           00211         goto    RB0_1
+02B8   2ABB           00212         goto    RB0_0
+02B9                  00213 RB0_1
+02B9   1406           00214         bsf             PORTB,0
+02BA   2ABC           00215         goto    RB_Fin
+02BB                  00216 RB0_0   
+02BB   1006           00217         bcf             PORTB,0
+                      00218 
+02BC                  00219 RB_Fin
+02BC   0008           00220         return
+                      00115 
+                      00116         END
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 24
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+BIENTenemosEmisor                 00000217
+BIENTenemosReceptor               00000206
+BitStart                          00000252
+BitStop                           00000278
+C                                 00000000
+Cargando                          000001D3
+CargandoCero                      000001EE
+CargandoFin                       000001F5
+CargandoInicio                    000001E3
+CargandoUno                       000001E6
+ComenzamosAEmitir                 00000236
+ContadorEmisor                    0000000E
+ContadorEnvio                     0000000D
+ContadorReceptor                  0000000F
+DC                                00000001
+DRecibido                         00000266
+DatosRecibido                     00000010
+Dormir                            00000008
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+ENVIO                             0000000C
+Elegir                            000001FB
+ElegirEsCero                      0000020E
+ElegirFIN                         0000022A
+ElegirNoEsCero                    000001FD
+Emitir                            0000022B
+EmitirFIN                         00000243
+EnviarCero                        0000023F
+EnviarUno                         0000023A
+ErrorHayDosEmisores               0000021E
+ErrorHayDosReceptores             00000224
+F                                 00000001
+FSR                               00000004
+FinReceptor                       0000027D
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+LCD_2Lineas4Bits5x7               0000011E
+LCD_ApuntaCaracter                00000016
+LCD_Auxiliar1                     00000014
+LCD_Auxiliar2                     00000015
+LCD_Borra                         0000011C
+LCD_BusDatos                      PORTB
+LCD_Byte                          0000014E
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 25
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LCD_ByteCompleto                  00000155
+LCD_Caracter                      00000121
+LCD_CaracteresPorLinea            00000010
+LCD_CodigoCGROM                   0000012B
+LCD_CursorIncr                    0000010C
+LCD_CursorOFF                     0000011A
+LCD_CursorON                      00000118
+LCD_CursorPosicion                00000018
+LCD_Dato                          00000011
+LCD_DosEspaciosBlancos            00000145
+LCD_EnheMayuscula                 00000132
+LCD_EnheMinuscula                 0000012C
+LCD_Envia                         00000123
+LCD_EnviaBlancos                  00000148
+LCD_EnviaByteLetra                00000161
+LCD_EnviaComando                  0000011F
+LCD_EnviaOtroBlanco               00000149
+LCD_EsFinalLinea                  0000017C
+LCD_EscribeLCD                    000000F8
+LCD_FinCGROM                      0000013F
+LCD_FinMensaje                    00000171
+LCD_FinMovimiento                 0000018B
+LCD_FinVisualizaDigito            00000163
+LCD_Grado                         00000139
+LCD_GuardaDato                    00000012
+LCD_GuardaTRISB                   00000013
+LCD_Inicializa                    000000E0
+LCD_Linea1                        0000010E
+LCD_Linea2                        00000110
+LCD_LineaEnBlanco                 00000141
+LCD_Mensaje                       00000164
+LCD_MensajeMovimiento             00000172
+LCD_Nibble                        00000159
+LCD_NoEsFinalLinea                00000181
+LCD_NoUltimoCaracter              0000016E
+LCD_NoUltimoCaracter2             00000187
+LCD_OFF                           00000116
+LCD_PinEnable                     PORTA,2
+LCD_PinRS                         PORTA,0
+LCD_PinRW                         PORTA,1
+LCD_PosicionLinea1                00000112
+LCD_PosicionLinea2                00000114
+LCD_PrimeraPosicion               00000176
+LCD_TresEspaciosBlancos           00000147
+LCD_UnEspacioBlanco               00000143
+LCD_ValorCaracter                 00000017
+LCD_VisualizaAlto                 00000156
+LCD_VisualizaBajo                 00000158
+LCD_VisualizaCaracter             00000178
+LCD_VisualizaOtroCaracter         00000168
+MensDatosEnv                      00000072
+Mensaje0                          00000032
+Mensaje1                          0000003D
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 26
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+MensajeBStop                      00000098
+MensajeBienvenida                 00000016
+MensajeBitStart                   0000008E
+MensajeDatCargado                 00000046
+MensajeElige                      00000023
+MensajeEmisorEncontrado           000000C2
+MensajeEmitiendo                  00000055
+MensajeErrorHayDosEmisores        000000A2
+MensajeErrorHayDosReceptores      000000B2
+MensajeReceptorEncontrado         000000D0
+MensajeRecibiendo                 00000063
+Mensajes                          00000015
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PintarEnLeds                      00000281
+Presentacion                      0000000A
+Principal                         00000006
+PuertaEnviar                      PORTB,1
+PuertaRecibir                     PORTB,0
+Pulsador                          PORTA,4
+R1Decima_BucleExterno             000001C9
+R1Decima_BucleExterno2            000001C7
+R1Decima_BucleInterno             000001CB
+R1ms_BucleExterno                 000001B3
+R1ms_BucleInterno                 000001B5
+RB0_0                             000002BB
+RB0_1                             000002B9
+RB0_Continua                      000002B5
+RB1_0                             000002B4
+RB1_1                             000002B2
+RB1_Continua                      000002AE
+RB2_0                             000002AD
+RB2_1                             000002AB
+RB2_Continua                      000002A7
+RB3_0                             000002A6
+RB3_1                             000002A4
+RB3_Continua                      000002A0
+RB4_0                             0000029F
+RB4_1                             0000029D
+RB4_Continua                      00000299
+RB5_0                             00000298
+RB5_1                             00000296
+RB5_Continua                      00000292
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 27
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RB6_0                             00000291
+RB6_1                             0000028F
+RB6_Continua                      0000028B
+RB7_0                             0000028A
+RB7_1                             00000288
+RBIE                              00000003
+RBIF                              00000000
+RB_Fin                            000002BC
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000019
+R_ContB                           0000001A
+R_ContC                           0000001B
+RecCero                           00000271
+RecCorrect                        00000081
+RecUno                            00000269
+Recibir                           0000024A
+RetardoMicros                     0000019F
+Retardo_100micros                 00000199
+Retardo_100ms                     000001A5
+Retardo_10micros                  0000018C
+Retardo_10ms                      000001AB
+Retardo_10s                       000001BD
+Retardo_1Decima                   000001C6
+Retardo_1ms                       000001B1
+Retardo_1s                        000001C3
+Retardo_200micros                 00000196
+Retardo_200ms                     000001A3
+Retardo_20micros                  0000019E
+Retardo_20ms                      000001A9
+Retardo_20s                       000001BB
+Retardo_2ms                       000001AF
+Retardo_2s                        000001C1
+Retardo_4micros                   00000192
+Retardo_500micros                 00000193
+Retardo_500ms                     000001C5
+Retardo_50micros                  0000019B
+Retardo_50ms                      000001A7
+Retardo_5micros                   00000191
+Retardo_5ms                       000001AD
+Retardo_5s                        000001BF
+Retardos_ms                       000001B2
+Rmicros_Bucle                     000001A0
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+MPASM  5.20                     PLANTILLA.ASM   6-1-2008  20:27:16         PAGE 28
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+__DEBUG                           1
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0100 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0140 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0180 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+01C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0200 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0240 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0280 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXX---
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   701
+Program Memory Words Free:   323
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :    10 reported,     0 suppressed
+
+
